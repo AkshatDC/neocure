@@ -20,5 +20,6 @@ export const env = {
   PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME || 'neocure-medical',
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || ''
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
+  GOOGLE_VISION_API_KEY: process.env.GOOGLE_VISION_API_KEY || '',
 };

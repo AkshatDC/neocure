@@ -15,6 +15,8 @@
     "lint": "eslint . --ext .ts"
   },
   "dependencies": {
+    "@google-cloud/vision": "^4.3.2",
+    "@langchain/openai": "^0.2.5",
     "@pinecone-database/pinecone": "^4.0.0",
     "@prisma/client": "^5.19.1",
     "bcryptjs": "^2.4.3",
@@ -22,6 +24,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "firebase-admin": "^12.3.1",
     "helmet": "^7.1.0",
     "hpp": "^0.2.3",
     "joi": "^17.13.3",
@@ -33,8 +36,11 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.14",
     "openai": "^4.55.3",
+    "pdf-parse": "^1.1.1",
+    "socket.io": "^4.7.5",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
+    "tesseract.js": "^5.1.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

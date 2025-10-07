@@ -1,11 +1,9 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth.js';
-import { prisma } from '../services/prisma.js';
-import { 
-  checkInteractionsWithActiveMeds, 
-  saveDrugInteraction 
-} from '../services/drugInteractionChecker.js';
+import { db, collections } from '../config/firebase.js';
+import { EnhancedDrugInteractionChecker } from '../services/drugInteractionChecker.js';
 import { generateInteractionExplanation } from '../services/ai.js';
+import { sendCriticalInteractionAlert } from '../services/alerts.js';
 
 /**
  * Get user's prescriptions
@@ -13,21 +11,31 @@ import { generateInteractionExplanation } from '../services/ai.js';
 export async function getPrescriptions(req: AuthRequest, res: Response) {
   try {
     const userId = req.user!.id;
-    const { status } = req.query;
+    const { status, patientId } = req.query;
     
-    const prescriptions = await prisma.prescription.findMany({
-      where: {
-        userId,
-        ...(status && { status: status as any }),
-      },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        interactionChecks: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
-    });
+    let query = db.collection(collections.prescriptions);
+    
+    // Filter based on user role
+    if (req.user!.role === 'PATIENT') {
+      query = query.where('patientId', '==', userId);
+    } else if (patientId) {
+      query = query.where('patientId', '==', patientId);
+    } else if (req.user!.role === 'DOCTOR') {
+      query = query.where('doctorId', '==', userId);
+    }
+    
+    if (status) {
+      query = query.where('status', '==', status);
+    }
+    
+    const snapshot = await query.orderBy('createdAt', 'desc').get();
+    
+    const prescriptions = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate(),
+      endDate: doc.data().endDate?.toDate(),
+    }));
     
     return res.json(prescriptions);
   } catch (error: any) {
@@ -44,8 +52,8 @@ export async function getPrescriptions(req: AuthRequest, res: Response) {
  */
 export async function addPrescription(req: AuthRequest, res: Response) {
   try {
-    const { userId, drugName, dosage, frequency, endDate, notes } = req.body as {
-      userId: string;
+    const { patientId, drugName, dosage, frequency, endDate, notes } = req.body as {
+      patientId: string;
       drugName: string;
       dosage: string;
       frequency: string;
@@ -53,72 +61,56 @@ export async function addPrescription(req: AuthRequest, res: Response) {
       notes?: string;
     };
     
-    if (!userId || !drugName || !dosage || !frequency) {
+    if (!patientId || !drugName || !dosage || !frequency) {
       return res.status(400).json({ 
-        error: 'Missing required fields: userId, drugName, dosage, frequency' 
+        error: 'Missing required fields: patientId, drugName, dosage, frequency' 
       });
     }
     
-    // Create prescription
-    const prescription = await prisma.prescription.create({
-      data: {
-        userId,
-        doctorId: req.user!.id,
-        drugName,
-        dosage,
-        frequency,
-        endDate: endDate ? new Date(endDate) : undefined,
-        notes,
-        status: 'ACTIVE',
-      },
-    });
+    const doctorId = req.user!.role === 'DOCTOR' ? req.user!.id : null;
+    
+    // Create prescription in Firebase
+    const prescriptionData = {
+      patientId,
+      doctorId,
+      drugName,
+      dosage,
+      frequency,
+      endDate: endDate ? new Date(endDate) : null,
+      notes: notes || '',
+      status: 'ACTIVE',
+      createdAt: new Date(),
+    };
+    
+    const prescriptionRef = await db.collection(collections.prescriptions).add(prescriptionData);
+    
+    console.log(`✅ Prescription created: ${prescriptionRef.id} - ${drugName}`);
     
     // Automatically check for interactions with active medications
-    console.log(`Auto-checking interactions for new prescription: ${drugName}`);
+    console.log(`🔍 Auto-checking interactions for: ${drugName}`);
     
     try {
-      const interactionResult = await checkInteractionsWithActiveMeds(userId, drugName);
+      const { interaction, alertsSent } = await EnhancedDrugInteractionChecker.checkPrescriptionInteractions(
+        patientId,
+        drugName,
+        doctorId || patientId
+      );
       
-      if (interactionResult.interactionDetected) {
-        // Generate AI explanation
-        let aiExplanation = interactionResult.aiExplanation;
-        try {
-          const activeMeds = await prisma.prescription.findMany({
-            where: { userId, status: 'ACTIVE', id: { not: prescription.id } },
-            select: { drugName: true },
-          });
-          
-          aiExplanation = await generateInteractionExplanation({
-            drugs: [...activeMeds.map(m => m.drugName), drugName],
-            severity: interactionResult.severity,
-            description: interactionResult.description,
-          });
-        } catch (error) {
-          console.warn('Failed to generate AI explanation:', error);
-        }
-        
-        // Save interaction to database
-        const savedInteraction = await saveDrugInteraction({
-          userId,
-          prescriptionId: prescription.id,
-          drugsInvolved: [drugName, ...(interactionResult.fdaSource ? Object.keys(interactionResult.fdaSource) : [])],
-          severity: interactionResult.severity,
-          description: interactionResult.description,
-          saferAlternatives: interactionResult.saferAlternatives,
-          aiExplanation: aiExplanation || interactionResult.aiExplanation,
-          fdaSource: interactionResult.fdaSource,
-          autoChecked: true,
-        });
+      if (interaction && interaction.interactionDetected) {
+        console.log(`⚠️  Interaction detected: ${interaction.severity}`);
         
         return res.status(201).json({
-          prescription,
+          prescription: {
+            id: prescriptionRef.id,
+            ...prescriptionData,
+          },
           interactionWarning: {
             detected: true,
-            severity: interactionResult.severity,
-            description: interactionResult.description,
-            saferAlternatives: interactionResult.saferAlternatives,
-            aiExplanation: aiExplanation || interactionResult.aiExplanation,
-            interactionId: savedInteraction.id,
+            severity: interaction.severity,
+            description: interaction.description,
+            saferAlternatives: interaction.saferAlternatives,
+            aiExplanation: interaction.aiExplanation,
+            alertsSent,
           },
         });
       }
@@ -128,7 +120,10 @@ export async function addPrescription(req: AuthRequest, res: Response) {
     }
     
     return res.status(201).json({
-      prescription,
+      prescription: {
+        id: prescriptionRef.id,
+        ...prescriptionData,
+      },
       interactionWarning: {
         detected: false,
         message: 'No interactions detected with current medications',
@@ -151,18 +146,24 @@ export async function updatePrescription(req: AuthRequest, res: Response) {
     const { id } = req.params;
     const { dosage, frequency, endDate, notes, status } = req.body;
     
-    const prescription = await prisma.prescription.update({
-      where: { id },
-      data: {
-        ...(dosage && { dosage }),
-        ...(frequency && { frequency }),
-        ...(endDate && { endDate: new Date(endDate) }),
-        ...(notes !== undefined && { notes }),
-        ...(status && { status }),
-      },
-    });
+    const updates: any = {};
+    if (dosage) updates.dosage = dosage;
+    if (frequency) updates.frequency = frequency;
+    if (endDate) updates.endDate = new Date(endDate);
+    if (notes !== undefined) updates.notes = notes;
+    if (status) updates.status = status;
+    updates.updatedAt = new Date();
     
-    return res.json(prescription);
+    await db.collection(collections.prescriptions).doc(id).update(updates);
+    
+    const updated = await db.collection(collections.prescriptions).doc(id).get();
+    
+    return res.json({
+      id: updated.id,
+      ...updated.data(),
+      createdAt: updated.data()?.createdAt?.toDate(),
+      endDate: updated.data()?.endDate?.toDate(),
+    });
   } catch (error: any) {
     console.error('Error updating prescription:', error);
     return res.status(500).json({ 
@@ -179,19 +180,49 @@ export async function discontinuePrescription(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     
-    const prescription = await prisma.prescription.update({
-      where: { id },
-      data: {
-        status: 'DISCONTINUED',
-        endDate: new Date(),
-      },
+    await db.collection(collections.prescriptions).doc(id).update({
+      status: 'DISCONTINUED',
+      endDate: new Date(),
+      updatedAt: new Date(),
     });
     
-    return res.json(prescription);
+    const updated = await db.collection(collections.prescriptions).doc(id).get();
+    
+    return res.json({
+      id: updated.id,
+      ...updated.data(),
+      createdAt: updated.data()?.createdAt?.toDate(),
+      endDate: updated.data()?.endDate?.toDate(),
+    });
   } catch (error: any) {
     console.error('Error discontinuing prescription:', error);
     return res.status(500).json({ 
       error: 'Failed to discontinue prescription',
+      message: error.message 
+    });
+  }
+}
+
+/**
+ * Get interaction history for a patient
+ */
+export async function getInteractionHistory(req: AuthRequest, res: Response) {
+  try {
+    const { patientId } = req.params;
+    const userId = req.user!.id;
+    
+    // Authorization check
+    if (req.user!.role === 'PATIENT' && patientId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    const interactions = await EnhancedDrugInteractionChecker.getInteractionHistory(patientId);
+    
+    return res.json(interactions);
+  } catch (error: any) {
+    console.error('Error fetching interaction history:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch interaction history',
       message: error.message 
     });
   }

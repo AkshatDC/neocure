@@ -66,4 +66,9 @@ router.put('/:id', authenticate, authorize(['DOCTOR', 'ADMIN']), PrescriptionCon
  */
 router.post('/:id/discontinue', authenticate, authorize(['DOCTOR', 'ADMIN']), PrescriptionController.discontinuePrescription);
 
+/**
+ * Get interaction history for a patient
+ */
+router.get('/interactions/:patientId', authenticate, PrescriptionController.getInteractionHistory);
+
 export default router;

@@ -41,6 +41,7 @@ export const collections = {
   prescriptions: 'prescriptions',
   drugInteractions: 'drugInteractions',
   medicalDocuments: 'medicalDocuments',
+  medicalRecords: 'medicalRecords',
   vectorEmbeddings: 'vectorEmbeddings',
   chatLogs: 'chatLogs',
   alerts: 'alerts',
