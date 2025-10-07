@@ -1,0 +1,29 @@
+{
+  "amoxicillin": {
+    "source": "sample",
+    "sections": {
+      "warnings": ["Allergic reactions in patients with penicillin hypersensitivity."],
+      "drug_interactions": ["May interact with oral anticoagulants; monitor blood clotting tests."],
+      "contraindications": ["Hypersensitivity to penicillins."],
+      "precautions": ["Use with caution in severe renal impairment."]
+    }
+  },
+  "warfarin": {
+    "source": "sample",
+    "sections": {
+      "warnings": ["Risk of bleeding; monitor INR."],
+      "drug_interactions": ["Many antibiotics and antifungals can increase warfarin effect."],
+      "contraindications": ["Uncontrolled bleeding disorders."],
+      "precautions": ["Careful use with drugs that modify clotting."]
+    }
+  },
+  "atorvastatin": {
+    "source": "sample",
+    "sections": {
+      "warnings": ["Risk of myopathy and rhabdomyolysis (rare)."],
+      "drug_interactions": ["CYP3A4 inhibitors can increase atorvastatin plasma concentrations."],
+      "contraindications": ["Active liver disease."],
+      "precautions": ["Avoid strong CYP3A4 inhibitors; monitor liver enzymes."]
+    }
+  }
+}

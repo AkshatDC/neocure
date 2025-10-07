@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+model User {
+  id                String              @id @default(uuid())
+  name              String
+  email             String              @unique
+  passwordHash      String
+  role              Role                @default(PATIENT)
+  createdAt         DateTime            @default(now())
+  profile           UserProfile?
+  records           MedicalRecord[]
+  allergyRisks      AllergyRisk[]
+  reminders         Reminder[]
+  chatLogs          ChatLog[]
+  prescriptions     Prescription[]
+  drugInteractions  DrugInteraction[]
+}
+
+model UserProfile {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  geneticData    Json?
+  environmentData Json?
+  preferences    Json?
+}
+
+model MedicalRecord {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileUrl           String
+  extractedText     String?
+  symptoms          String[]
+  pastConditions    String[]
+  currentMedications String[]
+  allergies         String[]
+  createdAt         DateTime @default(now())
+  allergyRisks      AllergyRisk[]
+}
+
+model AllergyRisk {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordId    String?
+  record      MedicalRecord? @relation(fields: [recordId], references: [id])
+  riskScore   String
+  explanation String
+  alternatives Json?
+  precautions Json?
+  createdAt   DateTime @default(now())
+}
+
+model AlternativeMedicine {
+  id               String  @id @default(uuid())
+  medicineName     String
+  saferAlternative String
+  notes            String?
+}
+
+model Cure {
+  id            String @id @default(uuid())
+  allergyType   String @unique
+  treatmentPlan String
+  doctorNotes   String?
+  updatedAt     DateTime @updatedAt
+}
+
+model Reminder {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  time        DateTime
+  status      String   @default("pending")
+}
+
+model ChatLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  response  String
+  timestamp DateTime @default(now())
+}
+
+enum PrescriptionStatus {
+  ACTIVE
+  COMPLETED
+  DISCONTINUED
+}
+
+model Prescription {
+  id                String              @id @default(uuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  doctorId          String?
+  drugName          String
+  dosage            String
+  frequency         String
+  startDate         DateTime            @default(now())
+  endDate           DateTime?
+  status            PrescriptionStatus  @default(ACTIVE)
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  interactionChecks DrugInteraction[]   @relation("PrescriptionInteractions")
+}
+
+enum InteractionSeverity {
+  NONE
+  MILD
+  MODERATE
+  SEVERE
+  CRITICAL
+}
+
+model DrugInteraction {
+  id                String              @id @default(uuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  prescriptionId    String?
+  prescription      Prescription?       @relation("PrescriptionInteractions", fields: [prescriptionId], references: [id])
+  drugsInvolved     String[]
+  severity          InteractionSeverity
+  description       String
+  saferAlternatives String[]
+  aiExplanation     String?
+  fdaSource         Json?
+  autoChecked       Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+}
+
+model InteractionLog {
+  id              String   @id @default(uuid())
+  endpoint        String
+  drugsChecked    String[]
+  success         Boolean
+  errorMessage    String?
+  responseTime    Int
+  userId          String?
+  createdAt       DateTime @default(now())
+}
