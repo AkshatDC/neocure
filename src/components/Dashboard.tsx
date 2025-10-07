@@ -1,5 +1,8 @@
-import { Activity, AlertTriangle, Pill, FileText, TrendingUp, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Activity, AlertTriangle, Pill, FileText, TrendingUp, Users, Loader } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { apiClient } from '../api/client';
+import DrugInteractionAlerts from './DrugInteractionAlerts';
 
 export default function Dashboard() {
   const { user } = useApp();
@@ -14,12 +17,46 @@ export default function Dashboard() {
 }
 
 function PatientDashboard() {
-  const stats = [
-    { label: 'Active Medications', value: '3', icon: Pill, color: 'blue' },
-    { label: 'Known Allergies', value: '2', icon: AlertTriangle, color: 'amber' },
-    { label: 'Medical Records', value: '8', icon: FileText, color: 'purple' },
-    { label: 'Risk Alerts', value: '1', icon: Activity, color: 'red' },
-  ];
+  const [stats, setStats] = useState([
+    { label: 'Active Medications', value: '...', icon: Pill, color: 'blue' },
+    { label: 'Known Allergies', value: '...', icon: AlertTriangle, color: 'amber' },
+    { label: 'Medical Records', value: '...', icon: FileText, color: 'purple' },
+    { label: 'Risk Alerts', value: '...', icon: Activity, color: 'red' },
+  ]);
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const [prescriptionsData, recordsData, interactionsData] = await Promise.all([
+        apiClient.get<any[]>('/prescriptions?status=ACTIVE').catch(() => []),
+        apiClient.get<any[]>('/records').catch(() => []),
+        apiClient.get<any[]>('/drug-interactions/history').catch(() => []),
+      ]);
+
+      setPrescriptions(prescriptionsData);
+
+      const criticalInteractions = interactionsData.filter(
+        (i: any) => i.severity === 'CRITICAL' || i.severity === 'SEVERE'
+      );
+
+      setStats([
+        { label: 'Active Medications', value: prescriptionsData.length.toString(), icon: Pill, color: 'blue' },
+        { label: 'Known Allergies', value: '0', icon: AlertTriangle, color: 'amber' },
+        { label: 'Medical Records', value: recordsData.length.toString(), icon: FileText, color: 'purple' },
+        { label: 'Risk Alerts', value: criticalInteractions.length.toString(), icon: Activity, color: 'red' },
+      ]);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -48,74 +85,38 @@ function PatientDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass rounded-2xl p-6 glow-soft">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Recent Risk Assessments</h3>
-          <div className="space-y-3">
-            <div className="risk-red rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-red-700">Aspirin</p>
-                <span className="text-xs font-bold text-red-600 bg-red-100 px-3 py-1 rounded-full">
-                  HIGH RISK
-                </span>
-              </div>
-              <p className="text-sm text-gray-700">Potential severe allergic reaction detected</p>
-            </div>
-
-            <div className="risk-green rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-green-700">Vitamin D3</p>
-                <span className="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">
-                  SAFE
-                </span>
-              </div>
-              <p className="text-sm text-gray-700">No contraindications found</p>
-            </div>
-
-            <div className="risk-amber rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="font-semibold text-amber-700">Ibuprofen</p>
-                <span className="text-xs font-bold text-amber-600 bg-amber-100 px-3 py-1 rounded-full">
-                  CAUTION
-                </span>
-              </div>
-              <p className="text-sm text-gray-700">Monitor for mild side effects</p>
-            </div>
-          </div>
-        </div>
+        <DrugInteractionAlerts />
 
         <div className="glass rounded-2xl p-6 glow-soft">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Upcoming Medication Reminders</h3>
-          <div className="space-y-3">
-            <div className="bg-white/50 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">Lisinopril 10mg</p>
-                  <p className="text-sm text-gray-600">Once daily</p>
-                </div>
-                <span className="text-sm font-bold text-blue-600">8:00 AM</span>
-              </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-4">Active Medications</h3>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader className="w-8 h-8 animate-spin text-blue-500" />
             </div>
-
-            <div className="bg-white/50 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">Vitamin D3 1000 IU</p>
-                  <p className="text-sm text-gray-600">Once daily</p>
-                </div>
-                <span className="text-sm font-bold text-blue-600">9:00 AM</span>
-              </div>
+          ) : prescriptions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <Pill className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No active medications</p>
             </div>
-
-            <div className="bg-white/50 rounded-xl p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">Metformin 500mg</p>
-                  <p className="text-sm text-gray-600">Twice daily</p>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {prescriptions.map((prescription) => (
+                <div key={prescription.id} className="bg-white/50 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-gray-800">
+                        {prescription.drugName} {prescription.dosage}
+                      </p>
+                      <p className="text-sm text-gray-600">{prescription.frequency}</p>
+                    </div>
+                    <span className="text-xs font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                      {prescription.status}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-sm font-bold text-blue-600">8:00 PM</span>
-              </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
