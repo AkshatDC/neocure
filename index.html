@@ -11,3 +11,21 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
+<script>
+import { auth, database } from "./firebase.js";
+
+// Example: sign up user
+import { createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+
+const email = "test@gmail.com";
+const password = "123456";
+
+createUserWithEmailAndPassword(auth, email, password)
+.then(userCredential => {
+console.log("User signed up:", userCredential.user);
+})
+.catch(error => {
+console.error("Signup error:", error.message);
+});
+</script>
