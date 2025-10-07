@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { MessageCircle, X, Send, Loader } from 'lucide-react';
 import { ChatMessage } from '../types';
+import { drugInteractionsApi } from '../api/drugInteractions';
 
 export default function ChatBot() {
   const [isOpen, setIsOpen] = useState(false);
@@ -8,13 +9,20 @@ export default function ChatBot() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I\'m your NeoCure AI assistant. How can I help you today?',
+      content: 'Hello! I\'m your NeoCure AI assistant. I can help with medication information, drug interactions, allergies, and health guidance. How can I help you today?',
       timestamp: new Date().toISOString(),
     },
   ]);
   const [inputMessage, setInputMessage] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleSendMessage = () => {
+  const extractDrugNames = (text: string): string[] => {
+    const commonDrugs = ['warfarin', 'aspirin', 'ibuprofen', 'metformin', 'lisinopril', 'atorvastatin', 'amoxicillin', 'omeprazole', 'levothyroxine', 'amlodipine'];
+    const words = text.toLowerCase().split(/\s+/);
+    return words.filter(word => commonDrugs.includes(word.replace(/[.,!?]/g, '')));
+  };
+
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     const userMessage: ChatMessage = {
@@ -25,21 +33,53 @@ export default function ChatBot() {
     };
 
     setMessages([...messages, userMessage]);
+    const query = inputMessage;
     setInputMessage('');
+    setIsProcessing(true);
 
-    setTimeout(() => {
+    try {
+      const response = await getAIResponse(query);
       const aiResponse: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: getAIResponse(inputMessage),
+        content: response,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, aiResponse]);
-    }, 1000);
+    } catch (error) {
+      const errorResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'I apologize, but I encountered an error processing your request. Please try again.',
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const getAIResponse = (query: string): string => {
+  const getAIResponse = async (query: string): Promise<string> => {
     const lowerQuery = query.toLowerCase();
+
+    // Check for drug interaction queries
+    if (lowerQuery.includes('interact') || lowerQuery.includes('combine') || lowerQuery.includes('together')) {
+      const drugs = extractDrugNames(query);
+      if (drugs.length >= 2) {
+        try {
+          const result = await drugInteractionsApi.check(drugs);
+          if (result.interactionDetected) {
+            return `⚠️ **Drug Interaction Detected**\n\n**Severity:** ${result.severity}\n\n${result.description}\n\n${result.saferAlternatives.length > 0 ? `**Safer Alternatives:** ${result.saferAlternatives.join(', ')}` : ''}\n\nPlease consult with your healthcare provider before combining these medications.`;
+          } else {
+            return `✅ Based on available data, ${drugs.join(' and ')} do not have significant known interactions. However, always consult your healthcare provider before starting any new medication.`;
+          }
+        } catch (error) {
+          return `I found ${drugs.join(' and ')} in your query. To check for interactions, please use the Drug Interaction Checker in the main menu for detailed analysis.`;
+        }
+      } else if (drugs.length === 1) {
+        return `I detected ${drugs[0]} in your query. To check for drug interactions, please mention at least two medications. For example: "Can I take warfarin and aspirin together?"`;
+      }
+    }
 
     if (lowerQuery.includes('side effect') || lowerQuery.includes('allerg')) {
       return 'I can help you understand medication side effects and allergies. Please check your Risk Dashboard for detailed assessments, or describe your symptoms and I\'ll provide relevant information.';
@@ -47,8 +87,10 @@ export default function ChatBot() {
       return 'You can set up medication reminders in the Medicine Reminders section. Would you like me to guide you through setting one up?';
     } else if (lowerQuery.includes('alternative') || lowerQuery.includes('replace')) {
       return 'Based on your risk assessment, I can suggest safer alternative medications. Check the Medication Alternatives section for personalized recommendations.';
+    } else if (lowerQuery.includes('prescription')) {
+      return 'You can view and manage your prescriptions in the Prescriptions section. Doctors can add new prescriptions with automatic interaction checking.';
     } else {
-      return 'I\'m here to assist with medication information, allergy detection, reminders, and health guidance. What would you like to know more about?';
+      return 'I\'m here to assist with:\n• Drug interaction checking (mention 2+ medications)\n• Medication side effects and allergies\n• Prescription management\n• Medicine reminders\n• Health guidance\n\nWhat would you like to know more about?';
     }
   };
 
@@ -94,10 +136,18 @@ export default function ChatBot() {
                       : 'bg-white/50 text-gray-800'
                   }`}
                 >
-                  <p className="text-sm">{message.content}</p>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
               </div>
             ))}
+            {isProcessing && (
+              <div className="flex justify-start">
+                <div className="bg-white/50 text-gray-800 p-3 rounded-2xl flex items-center gap-2">
+                  <Loader className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Thinking...</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="p-4 border-t border-gray-200/50">

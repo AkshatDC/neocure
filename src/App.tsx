@@ -10,6 +10,10 @@ import RiskDashboard from './components/RiskDashboard';
 import Reminders from './components/Reminders';
 import Profile from './components/Profile';
 import ChatBot from './components/ChatBot';
+import { DrugInteractionChecker } from './components/DrugInteractionChecker';
+import { PrescriptionManager } from './components/PrescriptionManager';
+import { InteractionHistory } from './components/InteractionHistory';
+import { DrugInteractionAnalytics } from './components/DrugInteractionAnalytics';
 
 function App() {
   const { isAuthenticated } = useApp();
@@ -35,6 +39,12 @@ function App() {
         return <Reminders />;
       case 'profile':
         return <Profile />;
+      case 'drug-interactions':
+        return <DrugInteractionChecker />;
+      case 'prescriptions':
+        return <PrescriptionManager />;
+      case 'interaction-history':
+        return <InteractionHistory />;
       case 'patients':
         return (
           <div className="glass rounded-2xl p-6 glow-soft">
@@ -57,12 +67,7 @@ function App() {
           </div>
         );
       case 'analytics':
-        return (
-          <div className="glass rounded-2xl p-6 glow-soft">
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">Analytics</h2>
-            <p className="text-gray-600">Analytics dashboard coming soon...</p>
-          </div>
-        );
+        return <DrugInteractionAnalytics />;
       default:
         return <Dashboard />;
     }

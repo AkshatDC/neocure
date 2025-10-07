@@ -7,7 +7,10 @@ import {
   Stethoscope,
   User,
   LogOut,
-  Heart
+  Heart,
+  ShieldAlert,
+  History,
+  BarChart3
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -24,6 +27,9 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: 'records', label: 'Medical Records', icon: FileText },
     { id: 'allergies', label: 'Allergy Detection', icon: AlertCircle },
     { id: 'medications', label: 'Medications', icon: Pill },
+    { id: 'drug-interactions', label: 'Drug Interactions', icon: ShieldAlert },
+    { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
+    { id: 'interaction-history', label: 'Interaction History', icon: History },
     { id: 'risk', label: 'Risk Dashboard', icon: Stethoscope },
     { id: 'reminders', label: 'Reminders', icon: Bell },
     { id: 'profile', label: 'Profile', icon: User },
@@ -32,15 +38,20 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
   const doctorMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'patients', label: 'Patients', icon: User },
+    { id: 'prescriptions', label: 'Prescriptions', icon: Pill },
+    { id: 'drug-interactions', label: 'Drug Interactions', icon: ShieldAlert },
+    { id: 'interaction-history', label: 'Interaction History', icon: History },
     { id: 'records', label: 'Medical Records', icon: FileText },
     { id: 'treatments', label: 'Treatments', icon: Stethoscope },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
   const adminMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'User Management', icon: User },
-    { id: 'analytics', label: 'Analytics', icon: FileText },
+    { id: 'analytics', label: 'Drug Analytics', icon: BarChart3 },
+    { id: 'interaction-history', label: 'All Interactions', icon: History },
     { id: 'profile', label: 'Profile', icon: User },
   ];
 
