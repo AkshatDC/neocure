@@ -2,6 +2,8 @@
 
 **AI-Powered Healthcare Platform** — A luxurious, glassmorphic web application that predicts medicine side effects and allergies, suggests safer alternatives, and provides personalized healthcare via explainable AI and an interactive RAG-powered chatbot.
 
+![WhatsApp Image 2025-10-09 at 23 02 48_28898625](https://github.com/user-attachments/assets/5554917c-92e1-471d-8b9a-215d8bfe157a)
+
 ---
 
 ## 🌟 Overview
