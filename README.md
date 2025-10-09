@@ -297,43 +297,6 @@ neocure/
 
 ---
 
-## 🛣️ Roadmap
-
-### Phase 1: Core Infrastructure ✅
-- [x] Backend scaffolding with Express + TypeScript
-- [x] Prisma schema and migrations
-- [x] JWT authentication with role-based access
-- [x] API route structure
-- [x] Docker setup
-- [x] Basic tests
-
-### Phase 2: AI Integration (In Progress)
-- [ ] OpenAI GPT-4 integration
-- [ ] LangChain RAG pipeline
-- [ ] Pinecone vector database
-- [ ] Medical record OCR/parsing
-- [ ] Explainable AI responses
-
-### Phase 3: Frontend-Backend Integration
-- [ ] API client setup in frontend
-- [ ] Authentication flow
-- [ ] Medical records upload UI
-- [ ] AI prediction displays
-- [ ] Chatbot integration
-- [ ] Reminder management
-
-### Phase 4: Production Readiness
-- [ ] Comprehensive test coverage (>80%)
-- [ ] Input validation middleware
-- [ ] Refresh token rotation
-- [ ] Email/push notifications
-- [ ] Cron jobs for reminders
-- [ ] Admin audit logs
-- [ ] Performance optimization
-- [ ] Security audit
-
----
-
 ## 🤝 Contributing
 
 This is a private project. For questions or contributions, contact the development team.
