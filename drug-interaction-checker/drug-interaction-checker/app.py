@@ -46,10 +46,7 @@ with st.sidebar:
 if example:
     st.session_state["drug_input"] = "Amoxicillin, Warfarin"
 
-drug_input = st.text_input(
-    "Drug names (comma separated):",
-    value=st.session_state.get("drug_input", "Amoxicillin, Warfarin")
-)
+
 
 # -------------------------------
 # Sample labels
