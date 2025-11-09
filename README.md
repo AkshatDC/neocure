@@ -6,7 +6,7 @@
 
 ---
 
-## 🌟 Overview
+## Overview
 
 NeoCure combines cutting-edge AI technology with a beautiful, modern UI to revolutionize how patients and healthcare providers manage medication safety and allergy risks.
 
